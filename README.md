@@ -1,6 +1,6 @@
 # R/C to PC Joystick
 
-hidrcjoy is my ATtiny based solution to convert a R/C transmitter PPM signal to a USB based HID joystick.
+hidrcjoy is my AVR based solution to convert a R/C transmitter PPM signal to a USB based HID joystick.
 
 ## Background
 
@@ -8,16 +8,16 @@ Many tranmitters for radio controlled models use PPM signal coding to transmit t
 
 ## Features
 
-- Decodes a standard PPM signal from a remote control transmitter
+- Decodes a standard PPM signal from a remote control transmitter with up to seven channels
 - Blinking LED with two different frequencies to indicate signal quality
 - Windows application to adjust PPM timing parameters, channel mapping, and channel polarity
 - Works with $2 ATtiny boards
 
 ## Hardware
 
-I tried three different boards, mostly for educational purposes. All three boards are inexpensive boards without native USB support, so USB is provided by a software USB stack called V-USB.
+I tried various boards, mostly for educational purposes. Most boards are inexpensive boards without native USB support, so USB is provided by a software USB stack called V-USB. The exception is the Pro Micro board with an ATmega32U, which features native USB support.
 
-If you have an ISP programmer, go for the USBtinyISP/FabISP board, otherwise the Digispark board with the built-in bootloader works good enough.
+If you have an ISP programmer, go for the FabISP board, otherwise the Digispark board with the built-in bootloader works good enough.
 
 ### Digispark (ATtiny85)
 
@@ -33,9 +33,15 @@ Connect the PPM signal to pin PA6/ADC6/MOSI (pin 4 of the ISP connector), and th
 
 ### DigisparkPro (ATtiny167)
 
-The third board I tried was a Digispark Pro clone based on an ATtiny167. The ATtiny167 finally has a usable input capture, which does not require any workarounds.
+The third board I used was a Digispark Pro clone based on an ATtiny167. The ATtiny167 finally has a usable input capture, which does not require any workarounds.
 
 Connect the PPM signal to pin PA4, and the R/C transmitter ground to the board ground pin. The LED is the built-in LED on port PB1.
+
+### Pro Micro (ATmega32U4)
+
+The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The ATmega32U4 has native USB support, and I used the LUFA USB framework to access it.
+
+Connect the PPM signal to pin 4 (PD4), and the R/C transmitter ground to the board ground pin. The LED is the built-in RX LED on port PB0.
 
 ## Building the software
 
@@ -47,6 +53,7 @@ To build the firmware, you need the AVR8 toolchain 3.5.4.1709, GNU make, and avr
 make BOARD=Digispark
 make BOARD=DigisparkPro
 make BOARD=FabISP
+make BOARD=ProMicro
 
 ### Windows Software
 
@@ -56,4 +63,4 @@ To build the PC software, you need Visual Studio 2017. Just open the solution an
 
 hidrcjoy is released under the GNU GPLv2.
 
-Thanks to Objective Development for the firmware-only USB driver V-USB.
+Thanks to Objective Development for the firmware-only USB driver V-USB, and Dean Camera for the LUFA USB framework.

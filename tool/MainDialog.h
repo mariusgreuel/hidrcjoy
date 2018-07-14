@@ -196,7 +196,7 @@ public:
                 UpdateReportControls(report);
 
                 static int count;
-                if (++count % 10 == 0)
+                if (++count % 20 == 0)
                 {
                     UsbEnhancedReport enhancedReport = {};
                     m_pDevice->ReadEnhancedReport(enhancedReport);

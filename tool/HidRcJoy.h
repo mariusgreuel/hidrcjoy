@@ -29,14 +29,14 @@ public:
 
     void ReadConfiguration()
     {
-        auto buffer = GetFeatureReport(ConfigurationId);
+        auto buffer = GetFeatureReport(ConfigurationReportId);
         std::memcpy(&m_configuration, buffer.data(), sizeof(m_configuration));
     }
 
     void WriteConfiguration()
     {
         Buffer<uint8_t> buffer(reinterpret_cast<const uint8_t*>(&m_configuration), sizeof(m_configuration));
-        SetFeatureReport(ConfigurationId, buffer);
+        SetFeatureReport(ConfigurationReportId, buffer);
     }
 
     void LoadDefaultConfiguration()
@@ -51,7 +51,6 @@ public:
 
     void WriteConfigurationToEeprom()
     {
-        //assert(m_configuration.IsValid());
         SetFeatureReport(WriteConfigurationToEepromId, Buffer<uint8_t>());
     }
 

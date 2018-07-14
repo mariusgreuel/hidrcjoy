@@ -82,14 +82,14 @@ public:
 
     void SetFeatureReport(uint8_t index, const Buffer<uint8_t>& buffer)
     {
-        if (buffer.size() + 1 > m_caps.FeatureReportByteLength)
+        if (buffer.size() > m_caps.FeatureReportByteLength)
             throw std::runtime_error("Buffer too big");
 
         Buffer<uint8_t> report(m_caps.FeatureReportByteLength);
 
+        std::memcpy(report.data(), buffer.data(), buffer.size());
+        std::memset(report.data() + buffer.size(), 0, m_caps.FeatureReportByteLength - buffer.size());
         report[0] = index;
-        std::memcpy(report.data() + 1, buffer.data(), buffer.size());
-        std::memset(report.data() + 1 + buffer.size(), 0, m_caps.FeatureReportByteLength - 1 - buffer.size());
 
         if (!HidD_SetFeature(m_hDevice, report.data(), m_caps.FeatureReportByteLength))
             throw std::runtime_error("HidD_SetFeature failed");
@@ -117,10 +117,10 @@ private:
         m_manufacturer = manufacturer;
 
         WCHAR serialNumber[128] = {};
-        if (!HidD_GetSerialNumberString(m_hDevice, serialNumber, sizeof(serialNumber)))
-            return AtlHresultFromLastError();
-
-        m_serialNumber = serialNumber;
+        if (HidD_GetSerialNumberString(m_hDevice, serialNumber, sizeof(serialNumber)))
+        {
+            m_serialNumber = serialNumber;
+        }
 
         return S_OK;
     }

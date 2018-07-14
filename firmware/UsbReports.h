@@ -15,7 +15,7 @@ enum ReportIds
     UnusedId,
     UsbReportId,
     UsbEnhancedReportId,
-    ConfigurationId,
+    ConfigurationReportId,
     LoadConfigurationDefaultsId,
     ReadConfigurationFromEepromId,
     WriteConfigurationToEepromId,
@@ -24,15 +24,19 @@ enum ReportIds
 
 struct UsbReport
 {
-    uint8_t m_reportId = UsbReportId;
-    int8_t m_value[PpmConfiguration::maxChannels];
+    uint8_t m_reportId;
+    int8_t m_value[MAX_CHANNELS];
 };
 
+#ifdef __cplusplus
 static_assert(sizeof(UsbReport) <= 8, "Report size for low-speed devices may not exceed 8 bytes");
+#endif
 
 struct UsbEnhancedReport
 {
+    uint8_t m_reportId;
+    uint8_t m_dummy[3];
     uint32_t m_frequency;
     uint16_t m_syncPulseWidth;
-    uint16_t m_channelPulseWidth[PpmConfiguration::maxChannels];
+    uint16_t m_channelPulseWidth[MAX_CHANNELS];
 };
