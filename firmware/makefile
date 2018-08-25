@@ -3,14 +3,16 @@
 # Copyright (C) 2018 Marius Greuel. All rights reserved.
 #
 
-PROJECT_ROOT=../..
+ifndef MY_TOOLCHAIN_AVR8
+    $(error error : environment variable MY_TOOLCHAIN_AVR8 is not defined. MY_TOOLCHAIN_AVR8 must point to the tools-avr8 repository)
+endif
 
 #BOARD ?= Digispark
 #BOARD ?= DigisparkPro
-#BOARD ?= FabISP
-BOARD ?= ProMicro
+BOARD ?= FabISP
+#BOARD ?= ProMicro
 
-include $(PROJECT_ROOT)/avr-tools/build/boards.mk
+include $(MY_TOOLCHAIN_AVR8)/build/boards.mk
 
 TARGET = hidrcjoy
 SOURCES = hidrcjoy.cpp
@@ -23,7 +25,11 @@ else ifeq ($(USB),LUFA)
     ARCH = AVR8
     F_USB = $(F_CPU)
 
-    LUFA_PATH = $(PROJECT_ROOT)/lufa-LUFA-170418/LUFA
+ifndef MY_LUFA_PATH
+    $(error error : environment variable MY_LUFA_PATH is not defined. MY_LUFA_PATH must point to the LUFA folder 'lufa-LUFA-170418')
+endif
+
+    LUFA_PATH = $(MY_LUFA_PATH)/LUFA
     DMBS_LUFA_PATH ?= $(LUFA_PATH)/Build/LUFA
     include $(DMBS_LUFA_PATH)/lufa-sources.mk
     include $(DMBS_LUFA_PATH)/lufa-gcc.mk
@@ -35,4 +41,4 @@ else ifeq ($(USB),LUFA)
     CPPFLAGS += -D NO_INTERNAL_SERIAL -D NO_DEVICE_REMOTE_WAKEUP -D NO_DEVICE_SELF_POWER
 endif
 
-include $(PROJECT_ROOT)/avr-tools/build/avr8.mk
+include $(MY_TOOLCHAIN_AVR8)/build/avr8.mk
