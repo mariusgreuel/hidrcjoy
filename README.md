@@ -35,7 +35,7 @@ Connect the PPM signal to pin PA6/ADC6/MOSI (pin 4 of the ISP connector), and th
 
 The third board I used was a Digispark Pro clone based on an ATtiny167. The ATtiny167 finally has a usable input capture, which does not require any workarounds.
 
-Connect the PPM signal to pin PA4, and the R/C transmitter ground to the board ground pin. The LED is the built-in LED on port PB1.
+Connect the PPM signal to pin 10 (PA4), and the R/C transmitter ground to the board ground pin. The LED is the built-in LED on port PB1.
 
 ### Pro Micro (ATmega32U4)
 
