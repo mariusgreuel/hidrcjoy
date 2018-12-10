@@ -8,6 +8,6 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #define VER_MAJOR       1
-#define VER_MINOR       0
-#define VER_BUILD       16
+#define VER_MINOR       1
+#define VER_BUILD       18
 #define VER_REVISION    0

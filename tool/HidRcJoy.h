@@ -5,7 +5,7 @@
 
 #pragma once
 #include "HidDevice.h"
-#include "../firmware/PpmConfiguration.h"
+#include "../firmware/Configuration.h"
 #include "../firmware/UsbReports.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -13,7 +13,7 @@
 class HidRcJoyDevice : public HidDevice
 {
 public:
-    PpmConfiguration* GetConfiguration() { return &m_configuration; }
+    Configuration* GetConfiguration() { return &m_configuration; }
 
     void ReadReport(UsbReport& report)
     {
@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    PpmConfiguration m_configuration;
+    Configuration m_configuration;
 };
 
 //---------------------------------------------------------------------------

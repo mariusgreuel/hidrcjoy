@@ -2,6 +2,8 @@
 
 hidrcjoy is my AVR based solution to convert a R/C transmitter PPM signal to a USB based HID joystick.
 
+In addition to PPM, the software supports the SRXL protocol. Using a SRXL capable receiver, such as the Multiplex RX-4/16 FLEXX, you can connect your M-Link capable receiver to your PC and use it as a HID joystick.
+
 ## Background
 
 Many tranmitters for radio controlled models use PPM signal coding to transmit the position of the control sticks to the receiver. Often, the transmitter has a connector, from which this PPM signal can be obtained. The hidrcjoy firmware is capable of decoding the PPM signal and converting the signals to an USB joystick. The R/C transmitter can then be used as an USB joystick on a PC, for instance to fly a model airplane on a PC based 3D simulation.
@@ -9,6 +11,7 @@ Many tranmitters for radio controlled models use PPM signal coding to transmit t
 ## Features
 
 - Decodes a standard PPM signal from a remote control transmitter with up to seven channels
+- Supports the Multiplex SRXL signal
 - Blinking LED with two different frequencies to indicate signal quality
 - Windows application to adjust PPM timing parameters, channel mapping, and channel polarity
 - Works with $2 ATtiny boards
@@ -39,9 +42,11 @@ Connect the PPM signal to pin 10 (PA4), and the R/C transmitter ground to the bo
 
 ### Pro Micro (ATmega32U4)
 
-The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The ATmega32U4 has native USB support, and I used the LUFA USB framework to access it.
+The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The Pro Micro is an Arduino Leonarda compatible board that has native USB support. I used the LUFA USB framework to access it.
 
 Connect the PPM signal to pin 4 (PD4), and the R/C transmitter ground to the board ground pin. The LED is the built-in RX LED on port PB0.
+
+If you want to use a SRXL receiver, connect GND, VCC, and the SRXL signal of the receiver (B/D output) to pin 0 (PD2/RXI).
 
 ## Building the software
 

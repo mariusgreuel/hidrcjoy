@@ -37,6 +37,8 @@ public:
         if (FAILED(hr))
             return hr;
 
+        HidD_SetNumInputBuffers(m_hDevice, 2);
+
         return S_OK;
     }
 

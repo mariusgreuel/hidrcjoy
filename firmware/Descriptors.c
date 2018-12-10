@@ -3,11 +3,83 @@
 // Copyright(C) 2018 Marius Greuel.All rights reserved.
 //
 
-#include <LUFA/Drivers/USB/USB.h>
-#include "Descriptors.h"
+#include <avr/pgmspace.h>
 #include "UsbReports.h"
+#include "Descriptors.h"
 
 /////////////////////////////////////////////////////////////////////////////
+
+#if defined(USB_V_USB)
+
+#include "usbdrv/usbdrv.h"
+#include "usbconfig.h"
+
+const uint8_t usbHidReportDescriptor[] PROGMEM =
+{
+    0x05, 0x01,         // USAGE_PAGE (Generic Desktop)
+    0x09, 0x04,         // USAGE (Joystick)
+    0xA1, 0x01,         // COLLECTION (Application)
+    0x09, 0x01,         //   USAGE (Pointer)
+    0x85, UsbReportId,  //   REPORT_ID (UsbReportId)
+    0x75, 0x08,         //   REPORT_SIZE (8)
+    0x15, 0x00,         //   LOGICAL_MINIMUM (0)
+    0x26, 0xFF, 0x00,   //   LOGICAL_MAXIMUM (255)
+    0x35, 0x00,         //   PHYSICAL_MINIMUM (0)
+    0x46, 0xFF, 0x00,   //   PHYSICAL_MAXIMUM (255)
+    0xA1, 0x00,         //   COLLECTION (Physical)
+    0x09, 0x30,         //     USAGE (X)
+    0x09, 0x31,         //     USAGE (Y)
+    0x95, 0x02,         //     REPORT_COUNT (2)
+    0x81, 0x02,         //     INPUT (Data,Var,Abs)
+    0xC0,               //   END_COLLECTION
+    0xA1, 0x00,         //   COLLECTION (Physical)
+    0x09, 0x32,         //     USAGE (Z)
+    0x09, 0x33,         //     USAGE (Rx)
+    0x95, 0x02,         //     REPORT_COUNT (2)
+    0x81, 0x02,         //     INPUT (Data,Var,Abs)
+    0xC0,               //   END_COLLECTION
+    0xA1, 0x00,         //   COLLECTION (Physical)
+    0x09, 0x34,         //     USAGE (Ry)
+    0x09, 0x35,         //     USAGE (Rz)
+    0x09, 0x36,         //     USAGE (Slider)
+    0x95, 0x03,         //     REPORT_COUNT (3)
+    0x81, 0x02,         //     INPUT (Data,Var,Abs)
+    0xC0,               //   END_COLLECTION
+    0xA1, 0x02,         //   COLLECTION (Logical)
+    0x06, 0x00, 0xFF,   //     USAGE_PAGE (Vendor Defined Page 1)
+    0x85, UsbEnhancedReportId, // REPORT_ID (UsbEnhancedReportId)
+    0x95, sizeof(struct UsbEnhancedReport), // REPORT_COUNT (...)
+    0x09, 0x00,         //     USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0x85, ConfigurationReportId, // REPORT_ID (...)
+    0x95, sizeof(struct Configuration), // REPORT_COUNT (...)
+    0x09, ConfigurationReportId, // USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0x85, LoadConfigurationDefaultsId, // REPORT_ID (...)
+    0x95, 0x01,         //     REPORT_COUNT (1)
+    0x09, LoadConfigurationDefaultsId, // USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0x85, ReadConfigurationFromEepromId, //REPORT_ID (...)
+    0x95, 0x01,         //     REPORT_COUNT (1)
+    0x09, ReadConfigurationFromEepromId, // USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0x85, WriteConfigurationToEepromId, // REPORT_ID (...)
+    0x95, 0x01,         //     REPORT_COUNT (1)
+    0x09, WriteConfigurationToEepromId, // USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0x85, JumpToBootloaderId, // REPORT_ID (...)
+    0x95, 0x01,         //     REPORT_COUNT (1)
+    0x09, JumpToBootloaderId, // USAGE (...)
+    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
+    0xC0,               //   END_COLLECTION
+    0xC0,               // END COLLECTION
+};
+
+_Static_assert(sizeof(usbHidReportDescriptor) == USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH, "USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH size mismatch");
+
+#elif defined(USB_LUFA)
+
+#include <LUFA/Drivers/USB/USB.h>
 
 typedef struct
 {
@@ -38,8 +110,10 @@ static const USB_Descriptor_HIDReport_Datatype_t JoystickReport[] PROGMEM =
         HID_RI_USAGE(8, 0x01),      //   USAGE (Pointer)
         HID_RI_REPORT_ID(8, 1),
         HID_RI_REPORT_SIZE(8, 0x08),
-        HID_RI_LOGICAL_MINIMUM(8, -128),
-        HID_RI_LOGICAL_MAXIMUM(8, 127),
+        HID_RI_LOGICAL_MINIMUM(8, 0),
+        HID_RI_LOGICAL_MAXIMUM(16, 255),
+        HID_RI_PHYSICAL_MINIMUM(8, 0),
+        HID_RI_PHYSICAL_MAXIMUM(16, 255),
         HID_RI_COLLECTION(8, 0x00), // COLLECTION (Physical)
             HID_RI_USAGE(8, 0x30),  // USAGE (X)
             HID_RI_USAGE(8, 0x31),  // USAGE (Y)
@@ -66,7 +140,7 @@ static const USB_Descriptor_HIDReport_Datatype_t JoystickReport[] PROGMEM =
             HID_RI_USAGE(8, UsbEnhancedReportId),
             HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_REPORT_ID(8, ConfigurationReportId),
-            HID_RI_REPORT_COUNT(8, sizeof(struct PpmConfiguration)),
+            HID_RI_REPORT_COUNT(8, sizeof(struct Configuration)),
             HID_RI_USAGE(8, ConfigurationReportId),
             HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_REPORT_ID(8, LoadConfigurationDefaultsId),
@@ -189,3 +263,5 @@ uint16_t CALLBACK_USB_GetDescriptor(uint16_t wValue, uint16_t wIndex, const void
 
     return NO_DESCRIPTOR;
 }
+
+#endif

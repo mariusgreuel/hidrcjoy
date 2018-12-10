@@ -20,15 +20,12 @@ extern "C" {
 #include "Descriptors.h"
 #endif
 
-#include "Timer.h"
-#include "PpmDecoder.h"
-#include "UsbReports.h"
-
 /////////////////////////////////////////////////////////////////////////////
 
 #define COUNTOF(array) (sizeof(array) / sizeof(array[0]))
 
 #if defined (BOARD_Digispark)
+#define HIDRCJOY_SRXL 0
 #define PPM_SIGNAL_PIN PINB
 #define PPM_SIGNAL_PORT PORTB
 #define PPM_SIGNAL 2 // Pin 2
@@ -36,6 +33,7 @@ extern "C" {
 #define LED_STATUS_PORT PORTB
 #define LED_STATUS 1 // Pin 1 (built-in LED)
 #elif defined (BOARD_DigisparkPro)
+#define HIDRCJOY_SRXL 0
 #define PPM_SIGNAL_PIN PINA
 #define PPM_SIGNAL_PORT PORTA
 #define PPM_SIGNAL 4
@@ -43,6 +41,7 @@ extern "C" {
 #define LED_STATUS_PORT PORTB
 #define LED_STATUS 1 // Pin 1 (built-in LED)
 #elif defined (BOARD_FabISP)
+#define HIDRCJOY_SRXL 0
 #define PPM_SIGNAL_PIN PINA
 #define PPM_SIGNAL_PORT PORTA
 #define PPM_SIGNAL 6 // ADC6/MOSI
@@ -50,6 +49,7 @@ extern "C" {
 #define LED_STATUS_PORT PORTA
 #define LED_STATUS 5 // PA5/MISO
 #elif defined (BOARD_ProMicro)
+#define HIDRCJOY_SRXL 1
 #define PPM_SIGNAL_PIN PIND
 #define PPM_SIGNAL_PORT PORTD
 #define PPM_SIGNAL 4 // Pin 4
@@ -62,60 +62,63 @@ extern "C" {
 
 //---------------------------------------------------------------------------
 
+#include "Timer.h"
+#include "Receiver.h"
+#include "UsbReports.h"
+
+//---------------------------------------------------------------------------
+
 static Timer g_Timer;
-static PpmDecoder g_PpmDecoder;
+static Receiver g_Receiver;
 static UsbReport g_UsbReport;
 static UsbEnhancedReport g_UsbEnhancedReport;
-static PpmConfiguration g_EepromConfiguration __attribute__((section(".eeprom")));
+static Configuration g_EepromConfiguration __attribute__((section(".eeprom")));
 
 //---------------------------------------------------------------------------
 
 static void PrepareUsbReport()
 {
-    bool isDataAvailable = g_PpmDecoder.IsDataAvailable();
+    bool hasData = g_Receiver.GetStatus() != NoSignal;
 
     g_UsbReport.m_reportId = UsbReportId;
     for (uint8_t i = 0; i < COUNTOF(g_UsbReport.m_value); i++)
     {
-        g_UsbReport.m_value[i] = isDataAvailable ? g_PpmDecoder.GetValue(i) : 0;
+        g_UsbReport.m_value[i] = hasData ? g_Receiver.GetValue(i) : 0x80;
     }
 }
 
 static void PrepareUsbEnhancedReport()
 {
-    bool isDataAvailable = g_PpmDecoder.IsDataAvailable();
-
     g_UsbEnhancedReport.m_reportId = UsbEnhancedReportId;
-    g_UsbEnhancedReport.m_frequency = g_PpmDecoder.m_frequency;
-    g_UsbEnhancedReport.m_syncPulseWidth = isDataAvailable ? g_PpmDecoder.GetSyncPulseWidth() : 0;
+    g_UsbEnhancedReport.m_status = g_Receiver.GetStatus();
 
     for (uint8_t i = 0; i < COUNTOF(g_UsbEnhancedReport.m_channelPulseWidth); i++)
     {
-        g_UsbEnhancedReport.m_channelPulseWidth[i] = isDataAvailable ? g_PpmDecoder.GetChannelPulseWidth(i) : 0;
+        g_UsbEnhancedReport.m_channelPulseWidth[i] = g_UsbEnhancedReport.m_status != 0 ? g_Receiver.GetChannelPulseWidth(i) : 0;
     }
 }
 
 static void LoadConfigurationDefaults()
 {
-    g_PpmDecoder.LoadDefaultConfiguration();
-    g_PpmDecoder.ApplyConfiguration();
+    g_Receiver.LoadDefaultConfiguration();
+    g_Receiver.UpdateConfiguration();
 }
 
 static void ReadConfigurationFromEeprom()
 {
-    eeprom_read_block(&g_PpmDecoder.m_Configuration, &g_EepromConfiguration, sizeof(g_EepromConfiguration));
+    eeprom_read_block(&g_Receiver.m_Configuration, &g_EepromConfiguration, sizeof(g_EepromConfiguration));
 
-    if (!g_PpmDecoder.IsValidConfiguration())
+    if (!g_Receiver.IsValidConfiguration())
     {
-        g_PpmDecoder.LoadDefaultConfiguration();
+        g_Receiver.LoadDefaultConfiguration();
     }
 
-    g_PpmDecoder.ApplyConfiguration();
+    g_Receiver.UpdateConfiguration();
 }
 
 static void WriteConfigurationToEeprom()
 {
-    eeprom_write_block(&g_PpmDecoder.m_Configuration, &g_EepromConfiguration, sizeof(g_EepromConfiguration));
+    eeprom_write_block(&g_Receiver.m_Configuration, &g_EepromConfiguration, sizeof(g_EepromConfiguration));
 }
 
 static void JumpToBootloader()
@@ -127,67 +130,6 @@ static void JumpToBootloader()
 // USB
 
 #if defined(USB_V_USB)
-
-const uint8_t usbHidReportDescriptor[] PROGMEM =
-{
-    0x05, 0x01,         // USAGE_PAGE (Generic Desktop)
-    0x09, 0x04,         // USAGE (Joystick)
-    0xA1, 0x01,         // COLLECTION (Application)
-    0x09, 0x01,         //   USAGE (Pointer)
-    0x85, UsbReportId,  //   REPORT_ID (UsbReportId)
-    0x75, 0x08,         //   REPORT_SIZE (8)
-    0x15, 0x80,         //   LOGICAL_MINIMUM (-128)
-    0x25, 0x7F,         //   LOGICAL_MAXIMUM (127)
-    0xA1, 0x00,         //   COLLECTION (Physical)
-    0x09, 0x30,         //     USAGE (X)
-    0x09, 0x31,         //     USAGE (Y)
-    0x95, 0x02,         //     REPORT_COUNT (2)
-    0x81, 0x02,         //     INPUT (Data,Var,Abs)
-    0xC0,               //   END_COLLECTION
-    0xA1, 0x00,         //   COLLECTION (Physical)
-    0x09, 0x32,         //     USAGE (Z)
-    0x09, 0x33,         //     USAGE (Rx)
-    0x95, 0x02,         //     REPORT_COUNT (2)
-    0x81, 0x02,         //     INPUT (Data,Var,Abs)
-    0xC0,               //   END_COLLECTION
-    0xA1, 0x00,         //   COLLECTION (Physical)
-    0x09, 0x34,         //     USAGE (Ry)
-    0x09, 0x35,         //     USAGE (Rz)
-    0x09, 0x36,         //     USAGE (Slider)
-    0x95, 0x03,         //     REPORT_COUNT (3)
-    0x81, 0x02,         //     INPUT (Data,Var,Abs)
-    0xC0,               //   END_COLLECTION
-    0xA1, 0x02,         //   COLLECTION (Logical)
-    0x06, 0x00, 0xFF,   //     USAGE_PAGE (Vendor Defined Page 1)
-    0x85, UsbEnhancedReportId, // REPORT_ID (UsbEnhancedReportId)
-    0x95, sizeof(UsbEnhancedReport), // REPORT_COUNT (...)
-    0x09, 0x00,         //     USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0x85, ConfigurationReportId, // REPORT_ID (...)
-    0x95, sizeof(PpmConfiguration), // REPORT_COUNT (...)
-    0x09, ConfigurationReportId, // USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0x85, LoadConfigurationDefaultsId, // REPORT_ID (...)
-    0x95, 0x01,         //     REPORT_COUNT (1)
-    0x09, LoadConfigurationDefaultsId, // USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0x85, ReadConfigurationFromEepromId, //REPORT_ID (...)
-    0x95, 0x01,         //     REPORT_COUNT (1)
-    0x09, ReadConfigurationFromEepromId, // USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0x85, WriteConfigurationToEepromId, // REPORT_ID (...)
-    0x95, 0x01,         //     REPORT_COUNT (1)
-    0x09, WriteConfigurationToEepromId, // USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0x85, JumpToBootloaderId, // REPORT_ID (...)
-    0x95, 0x01,         //     REPORT_COUNT (1)
-    0x09, JumpToBootloaderId, // USAGE (...)
-    0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-    0xC0,               //   END_COLLECTION
-    0xC0,               // END COLLECTION
-};
-
-static_assert(sizeof(usbHidReportDescriptor) == USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH, "USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH size mismatch");
 
 static uint8_t g_UsbWriteReportId;
 static uint8_t g_UsbWritePosition;
@@ -208,13 +150,13 @@ extern "C" uchar usbFunctionWrite(uchar* data, uchar length)
     if (length > g_UsbWriteBytesRemaining)
         length = g_UsbWriteBytesRemaining;
 
-    memcpy(reinterpret_cast<uint8_t*>(&g_PpmDecoder.m_Configuration) + g_UsbWritePosition, data, length);
+    memcpy(reinterpret_cast<uint8_t*>(&g_Receiver.m_Configuration) + g_UsbWritePosition, data, length);
     g_UsbWritePosition += length;
     g_UsbWriteBytesRemaining -= length;
 
     if (g_UsbWriteBytesRemaining == 0)
     {
-        g_PpmDecoder.ApplyConfiguration();
+        g_Receiver.UpdateConfiguration();
     }
 
     return g_UsbWriteBytesRemaining == 0; // return 1 if this was the last chunk
@@ -241,9 +183,9 @@ extern "C" usbMsgLen_t usbFunctionSetup(uchar data[8])
                 usbMsgPtr = (usbMsgPtr_t)&g_UsbEnhancedReport;
                 return sizeof(g_UsbEnhancedReport);
             case ConfigurationReportId:
-                g_PpmDecoder.m_Configuration.m_reportId = ConfigurationReportId;
-                usbMsgPtr = (usbMsgPtr_t)&g_PpmDecoder.m_Configuration;
-                return sizeof(g_PpmDecoder.m_Configuration);
+                g_Receiver.m_Configuration.m_reportId = ConfigurationReportId;
+                usbMsgPtr = (usbMsgPtr_t)&g_Receiver.m_Configuration;
+                return sizeof(g_Receiver.m_Configuration);
             default:
                 return 0;
             }
@@ -254,7 +196,7 @@ extern "C" usbMsgLen_t usbFunctionSetup(uchar data[8])
             switch (reportId)
             {
             case ConfigurationReportId:
-                SetupUsbWrite(reportId, sizeof(g_PpmDecoder.m_Configuration));
+                SetupUsbWrite(reportId, sizeof(g_Receiver.m_Configuration));
                 return USB_NO_MSG;
             case LoadConfigurationDefaultsId:
                 LoadConfigurationDefaults();
@@ -339,9 +281,9 @@ void EVENT_USB_Device_ControlRequest(void)
                 Endpoint_ClearOUT();
                 break;
             case ConfigurationReportId:
-                g_PpmDecoder.m_Configuration.m_reportId = ConfigurationReportId;
+                g_Receiver.m_Configuration.m_reportId = ConfigurationReportId;
                 Endpoint_ClearSETUP();
-                Endpoint_Write_Control_Stream_LE(&g_PpmDecoder.m_Configuration, sizeof(g_PpmDecoder.m_Configuration));
+                Endpoint_Write_Control_Stream_LE(&g_Receiver.m_Configuration, sizeof(g_Receiver.m_Configuration));
                 Endpoint_ClearOUT();
                 break;
             }
@@ -355,7 +297,7 @@ void EVENT_USB_Device_ControlRequest(void)
             {
             case ConfigurationReportId:
                 Endpoint_ClearSETUP();
-                Endpoint_Read_Control_Stream_LE(&g_PpmDecoder.m_Configuration, sizeof(g_PpmDecoder.m_Configuration));
+                Endpoint_Read_Control_Stream_LE(&g_Receiver.m_Configuration, sizeof(g_Receiver.m_Configuration));
                 Endpoint_ClearIN();
                 break;
             case LoadConfigurationDefaultsId:
@@ -448,8 +390,6 @@ static void InitializeUsi(void)
 
     // Outputs disabled, enable counter overflow interrupt, external clock source
     USICR = _BV(USIOIE) | _BV(USIWM1) | _BV(USIWM0) | _BV(USICS1);
-
-    g_PpmDecoder.m_frequency = F_CPU / 64;
 }
 
 ISR(USI_OVF_vect)
@@ -461,7 +401,7 @@ ISR(USI_OVF_vect)
     USISR = _BV(USIOIF) | 0x0F;
 
     sei();
-    g_PpmDecoder.OnPinChanged(level, ticks);
+    g_Receiver.m_PpmReceiver.OnPinChanged(level, ticks);
 }
 #endif
 
@@ -490,8 +430,6 @@ static void InitializeInputCapture(void)
     TCCR1B = _BV(ICNC1) | _BV(ICES1) | _BV(CS11);
 #endif
 
-    g_PpmDecoder.m_frequency = F_CPU / 8;
-
     // Input capture interrupt enable
     TIMSK1 = _BV(ICIE1);
 }
@@ -500,7 +438,15 @@ ISR(TIMER1_CAPT_vect)
 {
     uint16_t ticks = ICR1;
     sei();
-    g_PpmDecoder.OnPinChanged(true, ticks);
+    g_Receiver.m_PpmReceiver.OnPinChanged(true, ticks);
+}
+#endif
+
+#if HIDRCJOY_SRXL
+ISR(USART1_RX_vect)
+{
+    uint32_t time = g_Timer.GetMicros();
+    g_Receiver.m_SrxlReceiver.OnDataReceived(time);
 }
 #endif
 
@@ -526,6 +472,7 @@ int main(void)
 
     InitializePorts();
     g_Timer.Initialize();
+    g_Receiver.Initialize();
 #if defined (__AVR_ATtiny85__)
     InitializeUsi();
 #elif defined (__AVR_ATtiny44__) || defined (__AVR_ATtiny167__) || defined (__AVR_ATmega32U4__)
@@ -544,8 +491,8 @@ int main(void)
         ProcessUsb();
 
         uint32_t time = g_Timer.GetMicros();
-        g_PpmDecoder.Update(time);
-        BlinkStatusLed(g_PpmDecoder.IsDataAvailable(), time);
+        g_Receiver.Update(time);
+        BlinkStatusLed(g_Receiver.GetStatus() != NoSignal, time);
     }
 
     return 0;

@@ -4,5 +4,6 @@
 # Build results
 [Oo]bjs/
 *.hex
+*.bin
 *.elf
 *.lst

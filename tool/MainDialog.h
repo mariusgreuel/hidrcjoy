@@ -52,17 +52,19 @@ class CMainDialog : public CDialogImpl<CMainDialog>
             return 0;
         }
 
-        void SetPosition(int8_t x, int8_t y)
+        void SetPosition(int32_t x, int32_t y)
         {
-            m_x = x;
-            m_y = y;
-
-            Invalidate();
+            if (x != m_x || y != m_y)
+            {
+                m_x = x;
+                m_y = y;
+                Invalidate();
+            }
         }
 
     private:
-        int8_t m_x = 0;
-        int8_t m_y = 0;
+        int32_t m_x = 0;
+        int32_t m_y = 0;
     };
 
     class CSliderView : public CWindowImpl<CSliderView>
@@ -91,15 +93,17 @@ class CMainDialog : public CDialogImpl<CMainDialog>
             return 0;
         }
 
-        void SetPosition(int8_t x)
+        void SetPosition(int32_t x)
         {
-            m_x = x;
-
-            Invalidate();
+            if (x != m_x)
+            {
+                m_x = x;
+                Invalidate();
+            }
         }
 
     private:
-        int8_t m_x = 0;
+        int32_t m_x = 0;
     };
 
 public:
@@ -159,9 +163,9 @@ public:
         m_stSlider3.SubclassWindow(GetDlgItem(IDC_SLIDER3));
         m_stAboutLink.SubclassWindow(GetDlgItem(IDC_ABOUT_LINK));
 
-        m_udMinSyncWidth.SetRange(PpmConfiguration::minSyncWidth, PpmConfiguration::maxSyncWidth);
-        m_udCenterChannelPulseWidth.SetRange(PpmConfiguration::minChannelPulseWidth, PpmConfiguration::maxChannelPulseWidth);
-        m_udChannelPulseWidthRange.SetRange(PpmConfiguration::minChannelPulseWidth, PpmConfiguration::maxChannelPulseWidth);
+        m_udMinSyncWidth.SetRange(Configuration::minSyncWidth, Configuration::maxSyncWidth);
+        m_udCenterChannelPulseWidth.SetRange(Configuration::minChannelPulseWidth, Configuration::maxChannelPulseWidth);
+        m_udChannelPulseWidthRange.SetRange(Configuration::minChannelPulseWidth, Configuration::maxChannelPulseWidth);
 
         PopulateDeviceList();
 
@@ -196,7 +200,7 @@ public:
                 UpdateReportControls(report);
 
                 static int count;
-                if (++count % 20 == 0)
+                if (++count % 10 == 0)
                 {
                     UsbEnhancedReport enhancedReport = {};
                     m_pDevice->ReadEnhancedReport(enhancedReport);
@@ -231,7 +235,7 @@ public:
             pConfiguration->m_minSyncPulseWidth = static_cast<uint16_t>(GetIntegerValue(m_ecMinSyncPulseWidth));
             pConfiguration->m_centerChannelPulseWidth = static_cast<uint16_t>(GetIntegerValue(m_ecCenterChannelPulseWidth));
             pConfiguration->m_channelPulseWidthRange = static_cast<uint16_t>(GetIntegerValue(m_ecChannelPulseWidthRange));
-            pConfiguration->m_flags = static_cast<uint8_t>(m_btInvertedSignal.GetCheck() == BST_CHECKED ? PpmConfiguration::Inverted : PpmConfiguration::Normal);
+            pConfiguration->m_flags = static_cast<uint8_t>(m_btInvertedSignal.GetCheck() == BST_CHECKED ? Configuration::InvertedSignal : 0);
 
             UpdateDeviceConfiguration();
         }
@@ -402,20 +406,20 @@ private:
         m_stSlider2.SetPosition(0);
         m_stSlider3.SetPosition(0);
 
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
             CEdit(GetDlgItem(IDC_CHANNEL_WIDTH1 + i)).SetWindowText(_T(""));
             CEdit(GetDlgItem(IDC_CHANNEL_VALUE1 + i)).SetWindowText(_T(""));
         }
 
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
             CButton(GetDlgItem(IDC_CHANNEL1_POLARITY + i)).SetWindowText(_T("+"));
         }
 
-        for (int y = 0; y < PpmConfiguration::maxChannels; y++)
+        for (int y = 0; y < Configuration::maxChannels; y++)
         {
-            for (int x = 0; x < PpmConfiguration::maxChannels; x++)
+            for (int x = 0; x < Configuration::maxChannels; x++)
             {
                 CButton(GetDlgItem(IDC_CHANNEL1_SOURCE1 + y * 10 + x)).SetState(false);
             }
@@ -444,25 +448,25 @@ private:
         }
     }
 
-    void UpdateSignalControls(const PpmConfiguration* pConfiguration)
+    void UpdateSignalControls(const Configuration* pConfiguration)
     {
         m_ecMinSyncPulseWidth.SetWindowText(FormatString(_T("%d"), pConfiguration->m_minSyncPulseWidth));
         m_ecCenterChannelPulseWidth.SetWindowText(FormatString(_T("%d"), pConfiguration->m_centerChannelPulseWidth));
         m_ecChannelPulseWidthRange.SetWindowText(FormatString(_T("%d"), pConfiguration->m_channelPulseWidthRange));
-        m_btInvertedSignal.SetCheck((pConfiguration->m_flags & PpmConfiguration::Inverted) != 0 ? BST_CHECKED : BST_UNCHECKED);
+        m_btInvertedSignal.SetCheck((pConfiguration->m_flags & Configuration::InvertedSignal) != 0 ? BST_CHECKED : BST_UNCHECKED);
     }
 
-    void UpdatePolarityButtons(const PpmConfiguration* pConfiguration)
+    void UpdatePolarityButtons(const Configuration* pConfiguration)
     {
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
             CButton(GetDlgItem(IDC_CHANNEL1_POLARITY + i)).SetWindowText((pConfiguration->m_polarity & (1 << i)) == 0 ? _T("+") : _T("-"));
         }
     }
 
-    void UpdateAssignmentButtons(const PpmConfiguration* pConfiguration)
+    void UpdateAssignmentButtons(const Configuration* pConfiguration)
     {
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
             UpdateAssignmentButtons(IDC_CHANNEL1_SOURCE1 + 10 * i, pConfiguration->m_mapping[i]);
         }
@@ -470,7 +474,7 @@ private:
 
     void UpdateAssignmentButtons(int nIdStart, int value)
     {
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
             CButton(GetDlgItem(nIdStart + i)).SetState(value == i);
         }
@@ -478,38 +482,38 @@ private:
 
     void UpdateReportControls(const UsbReport& report)
     {
-        m_stLeftStick.SetPosition(report.m_value[0], report.m_value[1]);
-        m_stRightStick.SetPosition(report.m_value[2], report.m_value[3]);
-        m_stSlider1.SetPosition(report.m_value[4]);
-        m_stSlider2.SetPosition(report.m_value[5]);
-        m_stSlider3.SetPosition(report.m_value[6]);
+        m_stLeftStick.SetPosition(ValueToPosition(report.m_value[0]), ValueToPosition(report.m_value[1]));
+        m_stRightStick.SetPosition(ValueToPosition(report.m_value[2]), ValueToPosition(report.m_value[3]));
+        m_stSlider1.SetPosition(ValueToPosition(report.m_value[4]));
+        m_stSlider2.SetPosition(ValueToPosition(report.m_value[5]));
+        m_stSlider3.SetPosition(ValueToPosition(report.m_value[6]));
 
-        for (int i = 0; i < PpmConfiguration::maxChannels; i++)
+        for (int i = 0; i < Configuration::maxChannels; i++)
         {
-            CEdit(GetDlgItem(IDC_CHANNEL_VALUE1 + i)).SetWindowText(FormatString(_T("%d"), report.m_value[i]));
+            CEdit(GetDlgItem(IDC_CHANNEL_VALUE1 + i)).SetWindowText(FormatString(_T("%d"), ValueToPosition(report.m_value[i])));
         }
     }
 
     void UpdateEnhancedReportControls(const UsbEnhancedReport& report)
     {
-        if (report.m_syncPulseWidth == 0)
+        if (report.m_status == NoSignal)
         {
             m_stDeviceStatus.SetWindowText(_T("Device found, no signal"));
         }
         else
         {
-            m_stDeviceStatus.SetWindowText(FormatString(_T("Receiving data (sync pulse width at %d µs)"), TicksToUs(report.m_frequency, report.m_syncPulseWidth)));
+            m_stDeviceStatus.SetWindowText(FormatString(_T("Receiving data (%s)"), report.m_status == PpmSignal ? _T("PPM") : _T("SRXL")));
         }
 
         for (int i = 0; i < 7; i++)
         {
-            CEdit(GetDlgItem(IDC_CHANNEL_WIDTH1 + i)).SetWindowText(FormatString(_T("%d"), TicksToUs(report.m_frequency, report.m_channelPulseWidth[i])));
+            CEdit(GetDlgItem(IDC_CHANNEL_WIDTH1 + i)).SetWindowText(FormatString(_T("%d"), report.m_channelPulseWidth[i]));
         }
     }
 
-    static uint32_t TicksToUs(uint32_t frequency, uint32_t value)
+    static int32_t ValueToPosition(uint8_t value)
     {
-        return frequency > 0 ? value * 1000000ui64 / frequency : 0;
+        return value - 0x80;
     }
 
     CString GetFriendlyDeviceName(const HidRcJoyDevice* pDevice)

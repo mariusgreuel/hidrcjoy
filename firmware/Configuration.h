@@ -1,5 +1,5 @@
 //
-// PpmConfiguration.h
+// Configuration.h
 // Copyright (C) 2018 Marius Greuel. All rights reserved.
 //
 
@@ -10,10 +10,10 @@
 
 #define MAX_CHANNELS 7
 
-struct PpmConfiguration
+struct Configuration
 {
 #ifdef __cplusplus
-    static const uint8_t version = 0x10;
+    static const uint8_t version = 0x11;
     static const uint8_t maxChannels = MAX_CHANNELS;
     static const uint16_t minSyncWidth = 2000;
     static const uint16_t maxSyncWidth = 10000;
@@ -22,9 +22,7 @@ struct PpmConfiguration
 
     enum Flags
     {
-        Normal = 0,
-        Inverted = 1,
-        Default = Normal
+        InvertedSignal = 1,
     };
 #endif
 
