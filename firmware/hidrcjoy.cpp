@@ -452,15 +452,22 @@ ISR(USART1_RX_vect)
 
 //---------------------------------------------------------------------------
 
-void BlinkStatusLed(bool good, uint32_t time)
+static void BlinkStatusLed(bool good, uint32_t time)
 {
     static uint32_t lastTime;
 
-    uint32_t period = good ? 50000 : 500000;
-    if (time - lastTime > period)
+    if (good)
     {
-        lastTime = time;
-        LED_STATUS_PORT ^= _BV(LED_STATUS);
+        uint32_t period = 800000;
+        if (time - lastTime > period)
+        {
+            lastTime = time;
+            LED_STATUS_PORT ^= _BV(LED_STATUS);
+        }
+    }
+    else
+    {
+        LED_STATUS_PORT &= ~_BV(LED_STATUS);
     }
 }
 
