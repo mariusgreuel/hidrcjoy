@@ -1,0 +1,45 @@
+{
+  // Configuration file for 'Open Folder' in Visual Studio 2017.
+  // The environment variable 'GNU_TOOLCHAIN_AVR8' must point to the AVR8 toolchain.
+  "configurations": [
+    {
+      "name": "ProMicro",
+      "includePath": [
+        "${env.GNU_TOOLCHAIN_AVR8}\\avr\\include\\**",
+        "${env.GNU_TOOLCHAIN_AVR8}\\lib\\gcc\\avr\\5.4.0\\include",
+        "${env.GNU_TOOLCHAIN_AVR8}\\lib\\gcc\\avr\\5.4.0\\include-fixed",
+        "${workspaceRoot}\\..\\..\\lufa-LUFA-170418\\**",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "__GNUC__=5",
+        "__STDC_LIMIT_MACROS",
+        "__AVR_ATmega32U4__",
+        "F_CPU=16000000",
+        "BOARD_ProMicro",
+        "USB_LUFA"
+      ],
+      "intelliSenseMode": "linux-gcc-arm",
+      "compilerSwitches": "-std=c++11"
+    },
+    {
+      "name": "Digispark",
+      "includePath": [
+        "${env.GNU_TOOLCHAIN_AVR8}\\avr\\include\\**",
+        "${env.GNU_TOOLCHAIN_AVR8}\\lib\\gcc\\avr\\5.4.0\\include",
+        "${env.GNU_TOOLCHAIN_AVR8}\\lib\\gcc\\avr\\5.4.0\\include-fixed",
+        "${workspaceRoot}\\**"
+      ],
+      "defines": [
+        "__GNUC__=5",
+        "__STDC_LIMIT_MACROS",
+        "__AVR_ATtiny85__",
+        "F_CPU=16500000",
+        "BOARD_Digispark",
+        "USB_V_USB"
+      ],
+      "intelliSenseMode": "linux-gcc-arm",
+      "compilerSwitches": "-std=c++11"
+    }
+  ]
+}
