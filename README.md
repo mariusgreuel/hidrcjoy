@@ -42,7 +42,7 @@ Connect the PPM signal to pin 10 (PA4), and the R/C transmitter ground to the bo
 
 ### Pro Micro (ATmega32U4)
 
-The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The Pro Micro is an Arduino Leonarda compatible board that has native USB support. I used the LUFA USB framework to access it.
+The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The Pro Micro is an Arduino Leonardo compatible board that has native USB support. I used the LUFA USB framework to access it.
 
 Connect the PPM signal to pin 4 (PD4), and the R/C transmitter ground to the board ground pin. The LED is the built-in RX LED on port PB0.
 
