@@ -35,7 +35,7 @@ class CMainDialog : public CDialogImpl<CMainDialog>
 
             CPoint center = rcClient.CenterPoint();
             center.x += (rcClient.Width() / 2 - size - 1) * m_x / 128;
-            center.y += (rcClient.Height() / 2 - size - 1) * m_y / 128;
+            center.y -= (rcClient.Height() / 2 - size - 1) * m_y / 128;
 
             CRect rcHorizontal(center, center);
             rcHorizontal.left -= size;
