@@ -1,50 +1,40 @@
 {
-  // Configuration file for 'Open Folder' in Visual Studio 2017.
-  // Requires make.exe in your environment path variable.
   "version": "0.2.1",
-  "outDir": "\"${workspaceRoot}\\objs\"",
   "tasks": [
     {
-      "taskName": "build",
+      "taskLabel": "build",
       "appliesTo": "*",
       "type": "launch",
       "contextType": "build",
+      "workingDirectory": "${workspaceRoot}/src",
       "command": "make",
-      "args": [
-        "-s",
-        "flash"
-      ],
-      "envVars": {
-        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      "args": [ "-s" ],
+      "env": {
+        "PATH": "${env.PATH};${env.AVR8_GNU_TOOLCHAIN}/bin"
       }
     },
     {
-      "taskName": "rebuild",
+      "taskLabel": "rebuild",
       "appliesTo": "*",
       "type": "launch",
       "contextType": "rebuild",
+      "workingDirectory": "${workspaceRoot}/src",
       "command": "make",
-      "args": [
-        "-s",
-        "clean",
-        "all"
-      ],
-      "envVars": {
-        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      "args": [ "-s", "clean", "all" ],
+      "env": {
+        "PATH": "${env.PATH};${env.AVR8_GNU_TOOLCHAIN}/bin"
       }
     },
     {
-      "taskName": "clean",
+      "taskLabel": "clean",
       "appliesTo": "*",
       "type": "launch",
       "contextType": "clean",
+      "workingDirectory": "${workspaceRoot}/src",
       "command": "make",
-      "args": [
-        "-s",
-        "clean"
-      ],
-      "envVars": {
-        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      "args": [ "-s", "clean" ],
+      "env": {
+        "PATH": "${env.PATH};${env.AVR8_GNU_TOOLCHAIN}/bin"
       }
     }
   ]

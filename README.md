@@ -1,71 +1,112 @@
 # R/C to PC Joystick
 
-hidrcjoy is my AVR based solution to convert a R/C transmitter PPM signal to a USB based HID joystick.
+hidrcjoy is my AVR solution to convert a R/C transmitter
+PPM signal to a USB HID joystick.
 
-In addition to PPM, the software supports the SRXL protocol. Using a SRXL capable receiver, such as the Multiplex RX-4/16 FLEXX, you can connect your M-Link capable receiver to your PC and use it as a HID joystick.
+In addition to PPM, the software supports the Multiplex PCM and SRXL protocol.
+Using a SRXL capable receiver, such as the Multiplex RX-4/16 FLEXX,
+you can connect your M-Link capable receiver to your PC and
+use it as a HID joystick.
 
 ## Background
 
-Many tranmitters for radio controlled models use PPM signal coding to transmit the position of the control sticks to the receiver. Often, the transmitter has a connector, from which this PPM signal can be obtained. The hidrcjoy firmware is capable of decoding the PPM signal and converting the signals to an USB joystick. The R/C transmitter can then be used as an USB joystick on a PC, for instance to fly a model airplane on a PC based 3D simulation.
+Many tranmitters for radio controlled models use PPM signal coding to
+transmit the position of the control sticks to the receiver.
+Often, the transmitter has a connector, from which this PPM signal can be obtained.
+The hidrcjoy firmware is capable of decoding the PPM signal and
+converting the signals to a USB joystick using a HID device profile.
+The R/C transmitter can then be used as an USB joystick on a PC,
+for instance to fly a model airplane on a PC based 3D simulation.
 
 ## Features
 
-- Decodes a standard PPM signal from a remote control transmitter with up to seven channels
-- Supports the Multiplex SRXL signal
-- Blinking LED with two different frequencies to indicate signal quality
-- Windows application to adjust PPM timing parameters, channel mapping, and channel polarity
-- Works with $2 ATtiny boards
+- Decodes standard PPM signals
+- Decodes Multiplex PCM signals
+- Decodes Multiplex SRXL signals
+- Windows application to adjust PPM timing parameters, channel mapping, and channel polarity.
 
 ## Hardware
 
-I tried various boards, mostly for educational purposes. Most boards are inexpensive boards without native USB support, so USB is provided by a software USB stack called V-USB. The exception is the Pro Micro board with an ATmega32U, which features native USB support.
+Any Arduino-style AVR board with an **ATmega32U4** is supported, such as:
 
-If you have an ISP programmer, go for the FabISP board, otherwise the Digispark board with the built-in bootloader works good enough.
+- Arduino Micro
+- Arduino Leonardo
+- Pro Micro
+- Beetle
 
-### Digispark (ATtiny85)
+## Pinout
 
-My first try was a Digispark clone board with an ATtiny85. The ATtiny85 does not have a input capture pin, so I used a free running timer in order to measure the PPM signal. I used the USI overflow interrupt instead of the regular pin change interrupt, as I did not want to disturb the timing required by the V-USB implementation. This works reasonably well, however, there is a little noise on the channel readings, probably due to some delay introduced by the V-USB interrupt.
+hidrcjoy uses the following pins:
 
-Connect the PPM signal to pin PB2, and the R/C transmitter ground to the board ground pin. The LED is the built-in LED on port PB1.
+- PPM/PCM signal: A0/PF7
+- SRXL signal: RXD1/PD2
+- LED: PC7
 
-### FabISP (ATtiny44)
+Board     | PPM    | SRXL  | LED
+----------|--------|-------|------
+Micro     | D18/A0 | D0/RX | D13
+Leonardo  | D14/A0 | D0/RX | D13
+Pro Micro | D18/A0 | D0/RX | D13
+Beetle    | D14/A0 | D0/RX | D13
 
-The second board I tried was a FabISP board based on an ATtiny44, which is variant of the popular USBtinyISP programmer. The ATtiny44 has an input capture, but unfortunatly, the ICP1 pin is tied up by the USB connection. As a workaround, I configured the input capture to use the analog comparator. That way, we can compare the PPM signal voltage to the bandgap voltage (1.1V) and use any analog input pin. Using the input capture provide much more stable channel readings as compared to the pin change interrupt solution.
+## Installing the software
 
-Connect the PPM signal to pin PA6/ADC6/MOSI (pin 4 of the ISP connector), and the R/C transmitter ground to the board ground pin. The LED is the connected to port PA5/MISO (pin 1 of the ISP connector).
+You can find the latest release of the hidrcjoy software in the [Releases](https://github.com/mariusgreuel/hidrcjoy/releases).
 
-### DigisparkPro (ATtiny167)
+You need two files from the release files:
 
-The third board I used was a Digispark Pro clone based on an ATtiny167. The ATtiny167 finally has a usable input capture, which does not require any workarounds.
+- **hidrcjoy-app.zip**: The hidrcjoy Windows application
+- **hidrcjoy-firmware.zip**: The firmware for your ATmega32U4 board
 
-Connect the PPM signal to pin 10 (PA4), and the R/C transmitter ground to the board ground pin. The LED is the built-in LED on port PB1.
+The `hidrcjoy.hex` firmware needs to be flashed to your ATmega32U4 board using the built-in bootloader.
 
-### Pro Micro (ATmega32U4)
+If you use [AVRDUDE for Windows](https://github.com/mariusgreuel/avrdude), you can flash the software via specifing the USB VID/PID.
+For instance, for a Leonardo/Beetle board, you can use the following command:
 
-The most recent board was a SparkFun Pro Micro clone based on an ATmega32U4. The Pro Micro is an Arduino Leonardo compatible board that has native USB support. I used the LUFA USB framework to access it.
-
-Connect the PPM signal to pin 4 (PD4), and the R/C transmitter ground to the board ground pin. The LED is the built-in RX LED on port PB0.
-
-If you want to use a SRXL receiver, connect GND, VCC, and the SRXL signal of the receiver (B/D output) to pin 0 (PD2/RXI).
+```bat
+avrdude -c avr109 -p atmega32u4 -P usb:2341:0036 -D -U flash:w:hidrcjoy.hex:i
+```
 
 ## Building the software
 
-I put the precompiled binaries into the releases folder. To build the binaries yourself, see below:
+hidrcjoy consists of two parts:
+The firmware for the AVR board and a Windows application to configure the firmware.
 
-### Firmware
+### Building the Firmware
 
-To build the firmware, you need the AVR8 toolchain 3.5.4.1709, GNU make, and avrdude or micronucleus in your path. Depending on the board, type
-make BOARD=Digispark
-make BOARD=DigisparkPro
-make BOARD=FabISP
-make BOARD=ProMicro
+To build the firmware, you need the **AVR8 toolchain 3.7.0.1796**, **GNU make**, and **avrdude** in your path.
 
-### Windows Software
+On Windows, you can use set build.bat file to set the environment variables and run make:
 
-To build the PC software, you need Visual Studio 2017. Just open the solution and hit build.
+```bat
+set AVR8_GNU_TOOLCHAIN=C:\path\to\avr8-gnu-toolchain-3.7.0.1796-win32.any.x86_64
+build.bat
+```
+
+### Building the Windows Application
+
+To build the PC software, you need Visual Studio 2022. Just open the solution and hit build.
+
+## Ready made interface
+
+Personally, I use a [Beetle board](https://www.google.com/search?q=ATmega32U4+Beetle)
+connected to a thirty year old **Multiplex Profi mc 3030** radio with a [DIN connector](https://github.com/mariusgreuel/mpx-mc3030-pinout).
+Note that I soldered a GND wire to A2 to have a convinient place for the connector.
+
+**Beetle board with Multiplex DIN connector:**
+
+![Beetle board with DIN connector](./docs/hidrcjoy-usb-interface.jpg "hidrcjoy USB interface")
+
+**hidrcjoy Windows application**
+
+![Beetle board with DIN connector](./docs/hidrcjoy-app.png "hidrcjoy USB interface")
+
+An astute reader might have noticed that the center pulse of my radio has a pulse length of 1.6us instead of the ususal 1.5ms.
+This is what Multiplex used 30 years ago, and they switch to 1.5ms (Impulsformat UNI) in the 2000s.
+
+The reason that the pulse length is 3us off is due to the fact that my Beetle board uses a cheap resonator instead of a crystal.
+The timing of the 30 year old Multiplex radio is spot on!
 
 ## License
 
 hidrcjoy is released under the GNU GPLv2.
-
-Thanks to Objective Development for the firmware-only USB driver V-USB, and Dean Camera for the LUFA USB framework.

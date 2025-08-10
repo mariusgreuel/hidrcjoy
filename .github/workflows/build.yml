@@ -1,0 +1,47 @@
+#
+# build.yml
+# Copyright (C) 2018 Marius Greuel.
+#
+
+name: Build
+
+on:
+  push:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-app:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Build project
+        working-directory: src
+        run: msbuild /p:Configuration=Release /p:Platform=x64
+      - name: Archive binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidrcjoy-app
+          path: src/x64/Release
+  build-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: |
+          sudo apt update
+          sudo apt install -y make gcc-avr avr-libc
+      - name: Build project
+        working-directory: firmware
+        run: make
+      - name: Archive binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidrcjoy-firmware
+          path: firmware/build

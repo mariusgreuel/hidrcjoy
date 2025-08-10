@@ -1,9 +1,4 @@
-# Visual Studio cache/options directory
 .vs/
-
-# Build results
-[Oo]bjs/
-*.hex
-*.bin
-*.elf
-*.lst
+.vscode/
+.pio/
+build/
