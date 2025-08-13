@@ -25,7 +25,9 @@ public:
         TCCR1B = 0;
 
         m_led.Initialize();
+#if HIDRCJOY_DEBUG
         m_debug.Initialize();
+#endif
     }
 
     void RunTask(uint16_t time)
@@ -152,5 +154,7 @@ private:
 
 public:
     Led m_led;
+#if HIDRCJOY_DEBUG
     Debug m_debug;
+#endif
 };

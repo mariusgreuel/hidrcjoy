@@ -25,7 +25,7 @@
 #define HIDRCJOY_ICP_ACIC_A0 1
 
 // Enable debugging via pins D9, D10, D11
-#define HIDRCJOY_DEBUG 1
+#define HIDRCJOY_DEBUG 0
 
 #include <stdint.h>
 #include <string.h>
@@ -799,7 +799,6 @@ ISR(PCINT0_vect)
 
 #if HIDRCJOY_DEBUG
     g_board.m_debug.SetD9(risingEdge);
-    g_board.m_debug.ToggleD10();
 #endif
 
 #if HIDRCJOY_PPM
@@ -829,6 +828,10 @@ ISR(TIMER1_COMPA_vect)
 #if HIDRCJOY_PPM
 ISR(TIMER1_COMPB_vect)
 {
+#if HIDRCJOY_DEBUG
+    g_board.m_debug.ToggleD10();
+#endif
+
     g_ppmReceiver.OnOutputCompare();
 }
 #endif
