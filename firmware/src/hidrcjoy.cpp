@@ -494,30 +494,37 @@ private:
             0xA1, 0x01,         // COLLECTION (Application)
             0x09, 0x01,         //   USAGE (Pointer)
             0x85, UsbReportId,  //   REPORT_ID (UsbReportId)
-            0x75, 0x08,         //   REPORT_SIZE (8)
-            0x15, 0x00,         //   LOGICAL_MINIMUM (0)
-            0x26, 0xFF, 0x00,   //   LOGICAL_MAXIMUM (255)
-            0x35, 0x00,         //   PHYSICAL_MINIMUM (0)
-            0x46, 0xFF, 0x00,   //   PHYSICAL_MAXIMUM (255)
+            // --- Joystick 1 ---
             0xA1, 0x00,         //   COLLECTION (Physical)
             0x09, 0x30,         //     USAGE (X)
             0x09, 0x31,         //     USAGE (Y)
-            0x95, 0x02,         //     REPORT_COUNT (2)
+            0x15, 0x00,         //     LOGICAL_MINIMUM (0)
+            0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
+            0x75, 0x08,         //     REPORT_SIZE (8 bits)
+            0x95, 0x02,         //     REPORT_COUNT (2 axes)
             0x81, 0x02,         //     INPUT (Data,Var,Abs)
-            0xC0,               //   END_COLLECTION
+            0xC0,               //   END_COLLECTION (Physical)
+            // --- Joystick 2 ---
             0xA1, 0x00,         //   COLLECTION (Physical)
             0x09, 0x32,         //     USAGE (Z)
             0x09, 0x33,         //     USAGE (Rx)
-            0x95, 0x02,         //     REPORT_COUNT (2)
+            0x15, 0x00,         //     LOGICAL_MINIMUM (0)
+            0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
+            0x75, 0x08,         //     REPORT_SIZE (8 bits)
+            0x95, 0x02,         //     REPORT_COUNT (2 axes)
             0x81, 0x02,         //     INPUT (Data,Var,Abs)
-            0xC0,               //   END_COLLECTION
+            0xC0,               //   END_COLLECTION (Physical)
+            // --- Analog Sliders ---
             0xA1, 0x00,         //   COLLECTION (Physical)
             0x09, 0x34,         //     USAGE (Ry)
             0x09, 0x35,         //     USAGE (Rz)
             0x09, 0x36,         //     USAGE (Slider)
-            0x95, 0x03,         //     REPORT_COUNT (3)
+            0x15, 0x00,         //     LOGICAL_MINIMUM (0)
+            0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
+            0x75, 0x08,         //     REPORT_SIZE (8 bits)
+            0x95, 0x03,         //     REPORT_COUNT (3 sliders)
             0x81, 0x02,         //     INPUT (Data,Var,Abs)
-            0xC0,               //   END_COLLECTION
+            0xC0,               //   END_COLLECTION (Physical)
             0xA1, 0x02,         //   COLLECTION (Logical)
             0x06, 0x00, 0xFF,   //     USAGE_PAGE (Vendor Defined Page 1)
             0x85, UsbEnhancedReportId, // REPORT_ID (UsbEnhancedReportId)
@@ -544,8 +551,8 @@ private:
             0x95, 0x01,         //     REPORT_COUNT (1)
             0x09, JumpToBootloaderId, // USAGE (...)
             0xB1, 0x02,         //     FEATURE (Data,Var,Abs)
-            0xC0,               //   END_COLLECTION
-            0xC0,               // END COLLECTION
+            0xC0,               //   END_COLLECTION (Logical)
+            0xC0,               // END_COLLECTION (Application)
         };
 
         static const struct ATL_ATTRIBUTE_PACKED Descriptor
