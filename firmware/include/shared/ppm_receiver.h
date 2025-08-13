@@ -87,7 +87,6 @@ public:
 
     void OnOutputCompare()
     {
-        timer::OCR() += m_minSyncPulseWidth;
         ProcessSyncPause();
     }
 
