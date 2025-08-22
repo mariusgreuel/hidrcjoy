@@ -91,17 +91,18 @@ To build the PC software, you need Visual Studio 2022. Just open the solution an
 
 Personally, I use a [Beetle board](https://www.google.com/search?q=ATmega32U4+Beetle)
 connected to a thirty year old **Multiplex Profi mc 3030** radio with a [DIN connector](https://github.com/mariusgreuel/mpx-mc3030-pinout).
-Note that I soldered a GND wire to A2 to have a convinient place for the connector.
 
 **Beetle board with Multiplex DIN connector:**
 
 ![Beetle board with DIN connector](./docs/hidrcjoy-usb-interface.jpg "hidrcjoy USB interface")
 
+Note that I soldered a GND wire to A2 to have a convenient place for the connector.
+
 **hidrcjoy Windows application**
 
 ![Beetle board with DIN connector](./docs/hidrcjoy-app.png "hidrcjoy USB interface")
 
-An astute reader might have noticed that the center pulse of my radio has a pulse length of 1.6us instead of the ususal 1.5ms.
+The astute reader might have noticed that the center pulse of my radio has a pulse length of 1.6us instead of the ususal 1.5ms.
 This is what Multiplex used 30 years ago, and they switch to 1.5ms (Impulsformat UNI) in the 2000s.
 
 The reason that the pulse length is 3us off is due to the fact that my Beetle board uses a cheap resonator instead of a crystal.

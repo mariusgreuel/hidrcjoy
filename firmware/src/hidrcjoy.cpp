@@ -133,51 +133,52 @@ public:
 
     void LoadDefaultConfiguration()
     {
-        g_configuration.m_version = Configuration::version;
-        g_configuration.m_flags = 0;
-        g_configuration.m_minSyncPulseWidth = 3500;
-        g_configuration.m_centerChannelPulseWidth = 1500;
-        g_configuration.m_channelPulseWidthRange = 550;
-        g_configuration.m_polarity = 0;
+        g_configuration.version = Configuration::Version;
+        g_configuration.flags = 0;
+        g_configuration.minSyncWidth = Configuration::DefaultSyncWidth;
+        g_configuration.pulseWidthCenter = Configuration::DefaultPulseWidthCenter;
+        g_configuration.pulseWidthRange = Configuration::DefaultPulseWidthRange;
+        g_configuration.clockCorrection = 0x8000;
+        g_configuration.invert = 0;
 
-        for (uint8_t i = 0; i < COUNTOF(g_configuration.m_mapping); i++)
+        for (uint8_t i = 0; i < COUNTOF(g_configuration.mapping); i++)
         {
-            g_configuration.m_mapping[i] = i;
+            g_configuration.mapping[i] = i + 1;
         }
     }
 
     void UpdateConfiguration()
     {
 #if HIDRCJOY_PPM
-        auto minSyncPulseWidth = g_configuration.m_minSyncPulseWidth;
-        auto invertedSignal = (g_configuration.m_flags & Configuration::Flags::InvertedSignal) != 0;
-        ATL_DEBUG_PRINT("Configuration: MinSyncPulseWidth: %u\n", minSyncPulseWidth);
+        auto minSyncWidth = g_configuration.minSyncWidth;
+        auto invertedSignal = (g_configuration.flags & Configuration::Flags::InvertedSignal) != 0;
+        ATL_DEBUG_PRINT("Configuration: MinSyncWidth: %u\n", minSyncWidth);
         ATL_DEBUG_PRINT("Configuration: InvertedSignal: %d\n", invertedSignal);
-        g_ppmReceiver.SetMinSyncPulseWidth(minSyncPulseWidth);
+        g_ppmReceiver.SetMinSyncPulseWidth(minSyncWidth);
         g_invertedSignal = invertedSignal;
 #endif
     }
 
     bool IsValidConfiguration() const
     {
-        if (g_configuration.m_version != Configuration::version)
+        if (g_configuration.version != Configuration::Version)
             return false;
 
-        if (g_configuration.m_minSyncPulseWidth < Configuration::minSyncWidth ||
-            g_configuration.m_minSyncPulseWidth > Configuration::maxSyncWidth)
+        if (g_configuration.minSyncWidth < Configuration::MinSyncWidth ||
+            g_configuration.minSyncWidth > Configuration::MaxSyncWidth)
             return false;
 
-        if (g_configuration.m_centerChannelPulseWidth < Configuration::minChannelPulseWidth ||
-            g_configuration.m_centerChannelPulseWidth > Configuration::maxChannelPulseWidth)
+        if (g_configuration.pulseWidthCenter < Configuration::MinPulseWidth ||
+            g_configuration.pulseWidthCenter > Configuration::MaxPulseWidth)
             return false;
 
-        if (g_configuration.m_channelPulseWidthRange < 10 ||
-            g_configuration.m_channelPulseWidthRange > Configuration::maxChannelPulseWidth)
+        if (g_configuration.pulseWidthRange < 10 ||
+            g_configuration.pulseWidthRange > Configuration::MaxPulseWidth)
             return false;
 
-        for (uint8_t i = 0; i < COUNTOF(g_configuration.m_mapping); i++)
+        for (uint8_t i = 0; i < COUNTOF(g_configuration.mapping); i++)
         {
-            if (g_configuration.m_mapping[i] >= Configuration::maxInputChannels)
+            if (g_configuration.mapping[i] > Configuration::MaxInputChannels)
             {
                 return false;
             }
@@ -212,50 +213,42 @@ public:
         }
     }
 
-    uint16_t GetChannelData(uint8_t channel) const
+    uint16_t GetInputChannelData(uint8_t channel) const
     {
-        uint8_t index = g_configuration.m_mapping[channel];
-
         switch (m_signalSource)
         {
 #if HIDRCJOY_PPM
         case SignalSource::PPM:
-            return g_ppmReceiver.GetChannelPulseWidth(index);
+            return CorrectClockSkew(g_ppmReceiver.GetChannelPulseWidth(channel));
 #endif
 #if HIDRCJOY_PCM
         case SignalSource::PCM:
-            return g_pcmReceiver.GetChannelPulseWidth(index);
+            return g_pcmReceiver.GetChannelPulseWidth(channel);
 #endif
 #if HIDRCJOY_SRXL
         case SignalSource::SRXL:
-            return g_srxlReceiver.GetChannelPulseWidth(index);
+            return g_srxlReceiver.GetChannelPulseWidth(channel);
 #endif
         default:
             return 0;
         }
     }
 
-    uint8_t GetChannelValue(uint8_t channel) const
+    uint8_t GetInputChannelValue(uint8_t channel, bool invert = false) const
     {
-        uint8_t index = g_configuration.m_mapping[channel];
+        return PulseWidthToValue(GetInputChannelData(channel), invert);
+    }
 
-        switch (m_signalSource)
+    uint8_t GetOutputChannelValue(uint8_t channel) const
+    {
+        uint8_t index = g_configuration.mapping[channel];
+        if (index == 0)
         {
-#if HIDRCJOY_PPM
-        case SignalSource::PPM:
-            return PulseWidthToValue(channel, g_ppmReceiver.GetChannelPulseWidth(index));
-#endif
-#if HIDRCJOY_PCM
-        case SignalSource::PCM:
-            return PulseWidthToValue(channel, g_pcmReceiver.GetChannelPulseWidth(index));
-#endif
-#if HIDRCJOY_SRXL
-        case SignalSource::SRXL:
-            return PulseWidthToValue(channel, g_srxlReceiver.GetChannelPulseWidth(index));
-#endif
-        default:
-            return 0x80;
+            return PulseWidthToValue(0);
         }
+
+        bool invert = (g_configuration.invert & (1 << channel)) != 0;
+        return GetInputChannelValue(index - 1, invert);
     }
 
     bool IsReceiving() const
@@ -314,15 +307,19 @@ public:
     }
 
 private:
-    uint8_t PulseWidthToValue(uint8_t channel, uint16_t value) const
+    uint8_t PulseWidthToValue(uint16_t pulseWidth, bool invert = false) const
     {
-        if (value == 0)
+        if (pulseWidth == 0)
             return 0x80;
 
-        int16_t center = g_configuration.m_centerChannelPulseWidth;
-        int16_t range = g_configuration.m_channelPulseWidthRange;
-        bool inverted = (g_configuration.m_polarity & (1 << channel)) != 0;
-        return SaturateValue(ScaleValue(InvertValue(static_cast<int16_t>(value) - center, inverted), range));
+        int16_t center = g_configuration.pulseWidthCenter;
+        int16_t range = g_configuration.pulseWidthRange;
+        return SaturateValue(ScaleValue(InvertValue(static_cast<int16_t>(pulseWidth) - center, invert), range));
+    }
+
+    static uint16_t CorrectClockSkew(uint16_t value)
+    {
+        return static_cast<uint16_t>((2u * value) * static_cast<uint32_t>(g_configuration.clockCorrection) / 0x10000u);
     }
 
     static int16_t InvertValue(int16_t value, bool inverted)
@@ -432,7 +429,7 @@ public:
 
         for (uint8_t i = 0; i < COUNTOF(report.m_value); i++)
         {
-            report.m_value[i] = g_receiver.GetChannelValue(i);
+            report.m_value[i] = g_receiver.GetOutputChannelValue(i);
         }
     }
 
@@ -448,7 +445,8 @@ public:
 
         for (uint8_t i = 0; i < COUNTOF(report.m_channelPulseWidth); i++)
         {
-            report.m_channelPulseWidth[i] = g_receiver.GetChannelData(i);
+            report.m_channelPulseWidth[i] = g_receiver.GetInputChannelData(i);
+            report.m_channelValue[i] = g_receiver.GetInputChannelValue(i);
         }
     }
 
@@ -496,8 +494,8 @@ private:
             0x85, UsbReportId,  //   REPORT_ID (UsbReportId)
             // --- Joystick 1 ---
             0xA1, 0x00,         //   COLLECTION (Physical)
-            0x09, 0x30,         //     USAGE (X)
-            0x09, 0x31,         //     USAGE (Y)
+            0x09, 0x30,         //     USAGE (X) - CH1
+            0x09, 0x31,         //     USAGE (Y) - CH2
             0x15, 0x00,         //     LOGICAL_MINIMUM (0)
             0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
             0x75, 0x08,         //     REPORT_SIZE (8 bits)
@@ -506,8 +504,8 @@ private:
             0xC0,               //   END_COLLECTION (Physical)
             // --- Joystick 2 ---
             0xA1, 0x00,         //   COLLECTION (Physical)
-            0x09, 0x32,         //     USAGE (Z)
-            0x09, 0x33,         //     USAGE (Rx)
+            0x09, 0x32,         //     USAGE (Z) - CH3
+            0x09, 0x33,         //     USAGE (Rx) - CH4
             0x15, 0x00,         //     LOGICAL_MINIMUM (0)
             0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
             0x75, 0x08,         //     REPORT_SIZE (8 bits)
@@ -516,9 +514,9 @@ private:
             0xC0,               //   END_COLLECTION (Physical)
             // --- Analog Sliders ---
             0xA1, 0x00,         //   COLLECTION (Physical)
-            0x09, 0x34,         //     USAGE (Ry)
-            0x09, 0x35,         //     USAGE (Rz)
-            0x09, 0x36,         //     USAGE (Slider)
+            0x09, 0x34,         //     USAGE (Ry) - CH5
+            0x09, 0x35,         //     USAGE (Rz) - CH6
+            0x09, 0x36,         //     USAGE (Slider) - CH7
             0x15, 0x00,         //     LOGICAL_MINIMUM (0)
             0x26, 0xFF, 0x00,   //     LOGICAL_MAXIMUM (255)
             0x75, 0x08,         //     REPORT_SIZE (8 bits)
@@ -702,7 +700,7 @@ private:
             }
             case ConfigurationReportId:
             {
-                g_configuration.m_reportId = ConfigurationReportId;
+                g_configuration.reportId = ConfigurationReportId;
                 return WriteControlData(request.wLength, &g_configuration, sizeof(g_configuration), MemoryType::Ram);
             }
             default:

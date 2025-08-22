@@ -31,7 +31,7 @@ enum class SignalSource : uint8_t
 struct UsbReport
 {
     uint8_t m_reportId;
-    uint8_t m_value[Configuration::maxOutputChannels];
+    uint8_t m_value[Configuration::MaxOutputChannels];
 };
 
 static_assert(sizeof(UsbReport) <= 8, "Report size for low-speed devices may not exceed 8 bytes");
@@ -43,5 +43,6 @@ struct UsbEnhancedReport
     uint8_t m_channelCount;
     uint8_t m_dummy;
     uint32_t m_updateRate;
-    uint16_t m_channelPulseWidth[Configuration::maxOutputChannels];
+    uint16_t m_channelPulseWidth[Configuration::MaxInputChannels];
+    uint8_t m_channelValue[Configuration::MaxInputChannels];
 };

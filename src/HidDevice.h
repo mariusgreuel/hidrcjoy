@@ -12,6 +12,12 @@
 class HidDevice
 {
 public:
+    HidDevice() = default;
+    HidDevice(const HidDevice&) = delete;
+    HidDevice& operator=(const HidDevice&) = delete;
+    HidDevice(HidDevice&&) = default;
+    HidDevice& operator=(HidDevice&&) = default;
+
     ~HidDevice()
     {
         Close();

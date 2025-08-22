@@ -110,13 +110,13 @@ public:
 
     CComboBox m_cbDevices;
     CWindow m_stDeviceStatus;
-    CEdit m_ecMinSyncPulseWidth;
-    CEdit m_ecCenterChannelPulseWidth;
-    CEdit m_ecChannelPulseWidthRange;
+    CEdit m_ecMinSyncWidth;
+    CEdit m_ecPulseWidthCenter;
+    CEdit m_ecPulseWidthRange;
+    CEdit m_ecClockCorrection;
     CUpDownCtrl m_udMinSyncWidth;
-    CUpDownCtrl m_udCenterChannelPulseWidth;
-    CUpDownCtrl m_udChannelPulseWidthRange;
-    CButton m_btInvertedSignal;
+    CUpDownCtrl m_udPulseWidthCenter;
+    CUpDownCtrl m_udPulseWidthRange;
     CAxisView m_stLeftStick;
     CAxisView m_stRightStick;
     CSliderView m_stSlider1;
@@ -132,15 +132,15 @@ public:
         MESSAGE_HANDLER(WM_RECEIVED_REPORT, OnReceivedReport)
         MESSAGE_HANDLER(WM_RECEIVED_ENHANCED_REPORT, OnReceivedEnhancedReport)
         COMMAND_HANDLER(IDC_DEVICES, CBN_SELCHANGE, OnDevicesSelChange)
-        COMMAND_HANDLER(IDC_MIN_SYNC_PULSE_WIDTH, EN_CHANGE, OnTimingChange)
-        COMMAND_HANDLER(IDC_CENTER_CHANNEL_PULSE_WIDTH, EN_CHANGE, OnTimingChange)
-        COMMAND_HANDLER(IDC_CHANNEL_PULSE_WIDTH_RANGE, EN_CHANGE, OnTimingChange)
-        COMMAND_HANDLER(IDC_INVERTED_SIGNAL, BN_CLICKED, OnTimingChange)
-        COMMAND_RANGE_HANDLER(IDC_CHANNEL1_POLARITY, IDC_CHANNEL7_POLARITY, OnChannelPolarity)
-        COMMAND_RANGE_HANDLER(IDC_CHANNEL1_SOURCE1, IDC_CHANNEL7_SOURCE7, OnChannelSource)
-        COMMAND_ID_HANDLER(IDC_LOAD_DEFAULT_VALUES, OnLoadDefaultValues)
-        COMMAND_ID_HANDLER(IDC_READ_FROM_EEPROM, OnReadFromEeprom)
-        COMMAND_ID_HANDLER(IDC_WRITE_TO_EEPROM, OnWriteToEeprom)
+        COMMAND_HANDLER(IDC_MIN_SYNC_WIDTH, EN_CHANGE, OnTimingChange)
+        COMMAND_HANDLER(IDC_PULSE_WIDTH_CENTER, EN_CHANGE, OnTimingChange)
+        COMMAND_HANDLER(IDC_PULSE_WIDTH_RANGE, EN_CHANGE, OnTimingChange)
+        COMMAND_HANDLER(IDC_CLOCK_CORRECTION, EN_CHANGE, OnTimingChange)
+        COMMAND_RANGE_CODE_HANDLER(IDC_OUTPUT_MAPPING_1, IDC_OUTPUT_MAPPING_7, CBN_SELCHANGE, OnOutputMapping)
+        COMMAND_RANGE_CODE_HANDLER(IDC_OUTPUT_INVERT_1, IDC_OUTPUT_INVERT_7, BN_CLICKED, OnOutputInvert)
+        COMMAND_ID_HANDLER(IDC_USE_DEFAULTS, OnUseDefaults)
+        COMMAND_ID_HANDLER(IDC_LOAD_SETTINGS, OnLoadSettings)
+        COMMAND_ID_HANDLER(IDC_SAVE_SETTINGS, OnSaveSettings)
         COMMAND_ID_HANDLER(IDC_ABOUT_LINK, OnAboutLink)
         COMMAND_ID_HANDLER(IDCANCEL, OnClose)
     END_MSG_MAP()
@@ -149,13 +149,13 @@ public:
     {
         m_cbDevices.Attach(GetDlgItem(IDC_DEVICES));
         m_stDeviceStatus.Attach(GetDlgItem(IDC_DEVICE_STATUS));
-        m_ecMinSyncPulseWidth.Attach(GetDlgItem(IDC_MIN_SYNC_PULSE_WIDTH));
-        m_ecCenterChannelPulseWidth.Attach(GetDlgItem(IDC_CENTER_CHANNEL_PULSE_WIDTH));
-        m_ecChannelPulseWidthRange.Attach(GetDlgItem(IDC_CHANNEL_PULSE_WIDTH_RANGE));
-        m_udMinSyncWidth.Attach(GetDlgItem(IDC_MIN_SYNC_PULSE_WIDTH_SPIN));
-        m_udCenterChannelPulseWidth.Attach(GetDlgItem(IDC_CENTER_CHANNEL_PULSE_WIDTH_SPIN));
-        m_udChannelPulseWidthRange.Attach(GetDlgItem(IDC_CHANNEL_PULSE_WIDTH_RANGE_SPIN));
-        m_btInvertedSignal.Attach(GetDlgItem(IDC_INVERTED_SIGNAL));
+        m_ecMinSyncWidth.Attach(GetDlgItem(IDC_MIN_SYNC_WIDTH));
+        m_ecPulseWidthCenter.Attach(GetDlgItem(IDC_PULSE_WIDTH_CENTER));
+        m_ecPulseWidthRange.Attach(GetDlgItem(IDC_PULSE_WIDTH_RANGE));
+        m_ecClockCorrection.Attach(GetDlgItem(IDC_CLOCK_CORRECTION));
+        m_udMinSyncWidth.Attach(GetDlgItem(IDC_MIN_SYNC_WIDTH_SPIN));
+        m_udPulseWidthCenter.Attach(GetDlgItem(IDC_PULSE_WIDTH_CENTER_SPIN));
+        m_udPulseWidthRange.Attach(GetDlgItem(IDC_PULSE_WIDTH_RANGE_SPIN));
         m_stLeftStick.SubclassWindow(GetDlgItem(IDC_LEFT_STICK));
         m_stRightStick.SubclassWindow(GetDlgItem(IDC_RIGHT_STICK));
         m_stSlider1.SubclassWindow(GetDlgItem(IDC_SLIDER1));
@@ -163,10 +163,11 @@ public:
         m_stSlider3.SubclassWindow(GetDlgItem(IDC_SLIDER3));
         m_stAboutLink.SubclassWindow(GetDlgItem(IDC_ABOUT_LINK));
 
-        m_udMinSyncWidth.SetRange(Configuration::minSyncWidth, Configuration::maxSyncWidth);
-        m_udCenterChannelPulseWidth.SetRange(Configuration::minChannelPulseWidth, Configuration::maxChannelPulseWidth);
-        m_udChannelPulseWidthRange.SetRange(Configuration::minChannelPulseWidth, Configuration::maxChannelPulseWidth);
+        m_udMinSyncWidth.SetRange(Configuration::MinSyncWidth, Configuration::MaxSyncWidth);
+        m_udPulseWidthCenter.SetRange(Configuration::MinPulseWidth, Configuration::MaxPulseWidth);
+        m_udPulseWidthRange.SetRange(Configuration::MinPulseWidth, Configuration::MaxPulseWidth);
 
+        PopulateOutputMappingControls();
         PopulateDeviceList();
 
         DWORD dwThreadID = 0;
@@ -235,10 +236,13 @@ public:
         if (m_pDevice && !m_lockControlUpdate)
         {
             auto pConfiguration = m_pDevice->GetConfiguration();
-            pConfiguration->m_minSyncPulseWidth = static_cast<uint16_t>(GetIntegerValue(m_ecMinSyncPulseWidth));
-            pConfiguration->m_centerChannelPulseWidth = static_cast<uint16_t>(GetIntegerValue(m_ecCenterChannelPulseWidth));
-            pConfiguration->m_channelPulseWidthRange = static_cast<uint16_t>(GetIntegerValue(m_ecChannelPulseWidthRange));
-            pConfiguration->m_flags = static_cast<uint8_t>(m_btInvertedSignal.GetCheck() == BST_CHECKED ? Configuration::InvertedSignal : 0);
+            pConfiguration->minSyncWidth = static_cast<uint16_t>(GetIntegerValue(m_ecMinSyncWidth));
+            pConfiguration->pulseWidthCenter = static_cast<uint16_t>(GetIntegerValue(m_ecPulseWidthCenter));
+            pConfiguration->pulseWidthRange = static_cast<uint16_t>(GetIntegerValue(m_ecPulseWidthRange));
+
+            auto clockCorrection = std::min(std::max(GetFloatValue(m_ecClockCorrection), 0.9), 1.1);
+            pConfiguration->clockCorrection = static_cast<uint16_t>(clockCorrection * 32768);
+            pConfiguration->flags = 0;
 
             UpdateDeviceConfiguration();
         }
@@ -246,40 +250,39 @@ public:
         return 0;
     }
 
-    LRESULT OnChannelPolarity(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+    LRESULT OnOutputMapping(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
     {
         if (m_pDevice && !m_lockControlUpdate)
         {
-            int channel = wID - IDC_CHANNEL1_POLARITY;
+            int channel = wID - IDC_OUTPUT_MAPPING_1;
 
             auto pConfiguration = m_pDevice->GetConfiguration();
-            pConfiguration->m_polarity ^= 1 << channel;
+            pConfiguration->mapping[channel] = static_cast<uint8_t>(CComboBox(GetDlgItem(wID)).GetCurSel());
 
             UpdateDeviceConfiguration();
-            UpdatePolarityButtons(pConfiguration);
+            UpdateOutputMappingButtons(pConfiguration);
         }
 
         return 0;
     }
 
-    LRESULT OnChannelSource(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+    LRESULT OnOutputInvert(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
     {
         if (m_pDevice && !m_lockControlUpdate)
         {
-            int channel = (wID - IDC_CHANNEL1_SOURCE1) / 10;
-            int source = (wID - IDC_CHANNEL1_SOURCE1) % 10;
+            int channel = wID - IDC_OUTPUT_INVERT_1;
 
             auto pConfiguration = m_pDevice->GetConfiguration();
-            pConfiguration->m_mapping[channel] = static_cast<uint8_t>(source);
+            pConfiguration->invert ^= 1 << channel;
 
             UpdateDeviceConfiguration();
-            UpdateSourceButtons(pConfiguration);
+            UpdateOutputInvertButtons(pConfiguration);
         }
 
         return 0;
     }
 
-    LRESULT OnLoadDefaultValues(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+    LRESULT OnUseDefaults(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
     {
         if (m_pDevice)
         {
@@ -296,7 +299,7 @@ public:
         return 0;
     }
 
-    LRESULT OnReadFromEeprom(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+    LRESULT OnLoadSettings(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
     {
         if (m_pDevice)
         {
@@ -313,7 +316,7 @@ public:
         return 0;
     }
 
-    LRESULT OnWriteToEeprom(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+    LRESULT OnSaveSettings(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
     {
         if (m_pDevice)
         {
@@ -417,6 +420,19 @@ private:
         }
     }
 
+    void PopulateOutputMappingControls()
+    {
+        for (int x = 0; x < Configuration::MaxOutputChannels; x++)
+        {
+            CComboBox(GetDlgItem(IDC_OUTPUT_MAPPING_1 + x)).AddString(_T("None"));
+
+            for (int y = 0; y < Configuration::MaxInputChannels; y++)
+            {
+                CComboBox(GetDlgItem(IDC_OUTPUT_MAPPING_1 + x)).AddString(FormatString(_T("%d"), y + 1));
+            }
+        }
+    }
+
     void UpdateDeviceConfiguration()
     {
         if (m_pDevice)
@@ -433,10 +449,10 @@ private:
 
     void ClearControls()
     {
-        m_ecMinSyncPulseWidth.SetWindowText(_T(""));
-        m_ecCenterChannelPulseWidth.SetWindowText(_T(""));
-        m_ecChannelPulseWidthRange.SetWindowText(_T(""));
-        m_btInvertedSignal.SetCheck(BST_UNCHECKED);
+        m_ecMinSyncWidth.SetWindowText(_T(""));
+        m_ecPulseWidthCenter.SetWindowText(_T(""));
+        m_ecPulseWidthRange.SetWindowText(_T(""));
+        m_ecClockCorrection.SetWindowText(_T(""));
 
         m_stLeftStick.SetPosition(0, 0);
         m_stRightStick.SetPosition(0, 0);
@@ -444,23 +460,17 @@ private:
         m_stSlider2.SetPosition(0);
         m_stSlider3.SetPosition(0);
 
-        for (int i = 0; i < Configuration::maxOutputChannels; i++)
+        for (int i = 0; i < Configuration::MaxOutputChannels; i++)
         {
-            CEdit(GetDlgItem(IDC_CHANNEL_WIDTH1 + i)).SetWindowText(_T(""));
-            CEdit(GetDlgItem(IDC_CHANNEL_VALUE1 + i)).SetWindowText(_T(""));
+            CEdit(GetDlgItem(IDC_OUTPUT_MAPPING_1 + i)).SetWindowText(_T("None"));
+            CEdit(GetDlgItem(IDC_OUTPUT_VALUE_1 + i)).SetWindowText(_T(""));
+            CButton(GetDlgItem(IDC_OUTPUT_INVERT_1 + i)).SetState(false);
         }
 
-        for (int i = 0; i < Configuration::maxOutputChannels; i++)
+        for (int i = 0; i < Configuration::MaxInputChannels; i++)
         {
-            CButton(GetDlgItem(IDC_CHANNEL1_POLARITY + i)).SetWindowText(_T("+"));
-        }
-
-        for (int y = 0; y < Configuration::maxOutputChannels; y++)
-        {
-            for (int x = 0; x < Configuration::maxInputChannels; x++)
-            {
-                CButton(GetDlgItem(IDC_CHANNEL1_SOURCE1 + y * 10 + x)).SetState(false);
-            }
+            CEdit(GetDlgItem(IDC_INPUT_PULSE_WIDTH_1 + i)).SetWindowText(_T(""));
+            CEdit(GetDlgItem(IDC_INPUT_VALUE_1 + i)).SetWindowText(_T(""));
         }
     }
 
@@ -474,8 +484,8 @@ private:
 
                 auto pConfiguration = m_pDevice->GetConfiguration();
                 UpdateSignalControls(pConfiguration);
-                UpdatePolarityButtons(pConfiguration);
-                UpdateSourceButtons(pConfiguration);
+                UpdateOutputMappingButtons(pConfiguration);
+                UpdateOutputInvertButtons(pConfiguration);
             }
             catch (std::exception&)
             {
@@ -487,42 +497,39 @@ private:
     {
         m_lockControlUpdate = true;
 
-        m_ecMinSyncPulseWidth.SetWindowText(FormatString(_T("%d"), pConfiguration->m_minSyncPulseWidth));
-        m_ecCenterChannelPulseWidth.SetWindowText(FormatString(_T("%d"), pConfiguration->m_centerChannelPulseWidth));
-        m_ecChannelPulseWidthRange.SetWindowText(FormatString(_T("%d"), pConfiguration->m_channelPulseWidthRange));
-        m_btInvertedSignal.SetCheck((pConfiguration->m_flags & Configuration::InvertedSignal) != 0 ? BST_CHECKED : BST_UNCHECKED);
+        m_ecMinSyncWidth.SetWindowText(FormatString(_T("%d"), pConfiguration->minSyncWidth));
+        m_ecPulseWidthCenter.SetWindowText(FormatString(_T("%d"), pConfiguration->pulseWidthCenter));
+        m_ecPulseWidthRange.SetWindowText(FormatString(_T("%d"), pConfiguration->pulseWidthRange));
+        m_ecClockCorrection.SetWindowText(FormatString(_T("%1.6f"), pConfiguration->clockCorrection / 32768.0));
 
         m_lockControlUpdate = false;
     }
 
-    void UpdatePolarityButtons(const Configuration* pConfiguration)
+    void UpdateOutputMappingButtons(const Configuration* pConfiguration)
     {
         m_lockControlUpdate = true;
 
-        for (int i = 0; i < Configuration::maxOutputChannels; i++)
+        for (int i = 0; i < Configuration::MaxOutputChannels; i++)
         {
-            CButton(GetDlgItem(IDC_CHANNEL1_POLARITY + i)).SetWindowText((pConfiguration->m_polarity & (1 << i)) == 0 ? _T("+") : _T("-"));
+            CComboBox(GetDlgItem(IDC_OUTPUT_MAPPING_1 + i)).SetCurSel(pConfiguration->mapping[i]);
         }
 
         m_lockControlUpdate = false;
     }
 
-    void UpdateSourceButtons(const Configuration* pConfiguration)
+    void UpdateOutputInvertButtons(const Configuration* pConfiguration)
     {
         m_lockControlUpdate = true;
 
-        for (int y = 0; y < Configuration::maxOutputChannels; y++)
+        for (int i = 0; i < Configuration::MaxOutputChannels; i++)
         {
-            for (int x = 0; x < Configuration::maxInputChannels; x++)
-            {
-                CButton(GetDlgItem(IDC_CHANNEL1_SOURCE1 + 10 * y + x)).SetState(pConfiguration->m_mapping[y] == x);
-            }
+            CButton(GetDlgItem(IDC_OUTPUT_INVERT_1 + i)).SetCheck((pConfiguration->invert & (1 << i)) != 0 ? BST_CHECKED : BST_UNCHECKED);
         }
 
         m_lockControlUpdate = false;
     }
 
-    void UpdateSourceButtons(int nIdStart, int value)
+    void UpdateOutputMappingButtons(int nIdStart, int value)
     {
     }
 
@@ -534,9 +541,9 @@ private:
         m_stSlider2.SetPosition(ValueToPosition(report.m_value[5]));
         m_stSlider3.SetPosition(ValueToPosition(report.m_value[6]));
 
-        for (int i = 0; i < Configuration::maxOutputChannels; i++)
+        for (int i = 0; i < Configuration::MaxOutputChannels; i++)
         {
-            CEdit(GetDlgItem(IDC_CHANNEL_VALUE1 + i)).SetWindowText(FormatString(_T("%d"), ValueToPosition(report.m_value[i])));
+            CEdit(GetDlgItem(IDC_OUTPUT_VALUE_1 + i)).SetWindowText(FormatString(_T("%d"), ValueToPosition(report.m_value[i])));
         }
     }
 
@@ -569,9 +576,10 @@ private:
             m_stDeviceStatus.SetWindowText(FormatString(_T("Receiving data using %s at %uHz"), strSignalSource.GetString(), updateRate));
         }
 
-        for (int i = 0; i < Configuration::maxOutputChannels; i++)
+        for (int i = 0; i < Configuration::MaxInputChannels; i++)
         {
-            CEdit(GetDlgItem(IDC_CHANNEL_WIDTH1 + i)).SetWindowText(FormatString(_T("%d"), report.m_channelPulseWidth[i]));
+            CEdit(GetDlgItem(IDC_INPUT_PULSE_WIDTH_1 + i)).SetWindowText(FormatString(_T("%d"), report.m_channelPulseWidth[i]));
+            CEdit(GetDlgItem(IDC_INPUT_VALUE_1 + i)).SetWindowText(FormatString(_T("%d"), ValueToPosition(report.m_channelValue[i])));
         }
     }
 
@@ -602,6 +610,14 @@ private:
         CString str;
         control.GetWindowText(str);
         return _tstoi(str);
+    }
+
+    static double GetFloatValue(CEdit& control)
+    {
+        CString str;
+        control.GetWindowText(str);
+        str.Replace(_T(","), _T("."));
+        return _tstof(str);
     }
 
 private:

@@ -6,7 +6,7 @@
       "appliesTo": "*",
       "type": "launch",
       "contextType": "build",
-      "workingDirectory": "${workspaceRoot}/src",
+      "workingDirectory": "${workspaceRoot}",
       "command": "make",
       "args": [ "-s" ],
       "env": {
@@ -18,7 +18,7 @@
       "appliesTo": "*",
       "type": "launch",
       "contextType": "rebuild",
-      "workingDirectory": "${workspaceRoot}/src",
+      "workingDirectory": "${workspaceRoot}",
       "command": "make",
       "args": [ "-s", "clean", "all" ],
       "env": {
@@ -30,7 +30,7 @@
       "appliesTo": "*",
       "type": "launch",
       "contextType": "clean",
-      "workingDirectory": "${workspaceRoot}/src",
+      "workingDirectory": "${workspaceRoot}",
       "command": "make",
       "args": [ "-s", "clean" ],
       "env": {

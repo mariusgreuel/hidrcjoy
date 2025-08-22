@@ -7,32 +7,35 @@
 #pragma once
 #include <stdint.h>
 
-#define MAX_CHANNELS 7
-
 struct Configuration
 {
-#ifdef __cplusplus
-    static const uint8_t version = 0x11;
-    static const uint8_t maxInputChannels = 7;
-    static const uint8_t maxOutputChannels = 7;
-    static const uint16_t minSyncWidth = 2000;
-    static const uint16_t maxSyncWidth = 10000;
-    static const uint16_t minChannelPulseWidth = 500;
-    static const uint16_t maxChannelPulseWidth = 3000;
+    static constexpr uint8_t Version = 20;
+    static constexpr uint8_t MaxInputChannels = 9;
+    static constexpr uint8_t MaxOutputChannels = 7;
+    static constexpr uint16_t DefaultSyncWidth = 3500;
+    static constexpr uint16_t DefaultPulseWidthCenter = 1500;
+    static constexpr uint16_t DefaultPulseWidthRange = 550;
+    static constexpr uint16_t MinSyncWidth = 2000;
+    static constexpr uint16_t MaxSyncWidth = 10000;
+    static constexpr uint16_t MinPulseWidth = 500;
+    static constexpr uint16_t MaxPulseWidth = 3000;
+
+    static_assert(MaxOutputChannels <= 7, "MaxOutputChannels must not exceed 7");
+    static_assert(MaxOutputChannels <= MaxInputChannels, "MaxInputChannels must not exceed 9");
 
     enum Flags
     {
         InvertedSignal = 1,
     };
-#endif
 
-    uint8_t m_reportId;
-    uint8_t m_version;
-    uint8_t m_flags;
-    uint8_t m_dummy;
-    uint16_t m_minSyncPulseWidth;
-    uint16_t m_centerChannelPulseWidth;
-    uint16_t m_channelPulseWidthRange;
-    uint8_t m_polarity;
-    uint8_t m_mapping[MAX_CHANNELS];
+    uint8_t reportId = 0;
+    uint8_t version = 0;
+    uint8_t flags = 0;
+    uint8_t dummy = 0;
+    uint16_t minSyncWidth = 0;
+    uint16_t pulseWidthCenter = 0;
+    uint16_t pulseWidthRange = 0;
+    uint16_t clockCorrection = 0;
+    uint8_t invert = 0;
+    uint8_t mapping[MaxOutputChannels] = {};
 };
